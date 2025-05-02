@@ -1,0 +1,19 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__
+db.sqlite3
+media/
+staticfiles/
+
+# Entornos virtuales
+env/
+venv/
+*.env
+
+# Visual Studio Code
+.vscode/
+
+# Archivos de configuración de Windows
+Thumbs.db
