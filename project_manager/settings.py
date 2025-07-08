@@ -13,6 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
 ALLOWED_HOSTS = ['*']
+ROOT_URLCONF = 'project_manager.urls'
+CORS_ALLOW_ALL_ORIGINS = True
 
 # --------------------------------------------------
 # INSTALLED APPS
@@ -20,7 +22,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     # Django core apps (puedes activarlas si las necesitas)
     # 'django.contrib.admin',
-    # 'django.contrib.auth',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     # 'django.contrib.sessions',
     # 'django.contrib.messages',

@@ -17,10 +17,22 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from projects import urls as projects_urls
+from repositories import urls as repositories_urls
+from areas import urls as areas_urls
+from tools import urls as tools_urls
+from users.Crear_Usuario import urls as user_urls
+from users.LogIn import urls as login_urls
 
 urlpatterns = [
     #path('admin/', admin.site.urls),
+    path('api/', include(projects_urls)),
+    path('api/', include(areas_urls)),
+    path('api/', include(repositories_urls)),
+    path('api/', include(tools_urls)),
+    path('api/', include(user_urls)),
+    path('api/', include(login_urls)),
 ]
 
 
