@@ -1,16 +1,14 @@
-from django.shortcuts import render
 from rest_framework import viewsets
-from .Serializers import ProjectSerializer, StatusTypeSerializer
 from .models import Project, StatusType
-
-# Create your views here.
+from .Serializers import ProjectSerializer, StatusTypeSerializer
 
 class StatusTypeViewSet(viewsets.ModelViewSet):
-    queryset = StatusType.objects.all() # type: ignore[attr-defined]
+    queryset = StatusType.objects.all()
     serializer_class = StatusTypeSerializer
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all() # type: ignore[attr-defined]
+    queryset = Project.objects.all().order_by('id')\
+        .select_related('group', 'status', 'project_owner')\
+        .prefetch_related('areas_projects__area', 'tools_projects__tool', 'repositories_projects__repository')
+
     serializer_class = ProjectSerializer
-
-
