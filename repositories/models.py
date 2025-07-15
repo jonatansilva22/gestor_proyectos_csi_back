@@ -6,7 +6,6 @@ from projects.models import Project
 class Repository(models.Model):
     name = models.CharField(max_length=50)
     repository_url = models.URLField()
-    project = models.ForeignKey(Project, on_delete=models.CASCADE) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -15,3 +14,10 @@ class Repository(models.Model):
 
     def __str__(self):
         return str(self.name)
+    
+class RepositoryProject(models.Model):
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='repositories_projects')
+
+    class Meta:
+        db_table = 'repositories_projects'

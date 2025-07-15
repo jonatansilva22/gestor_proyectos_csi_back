@@ -17,7 +17,7 @@ class Tool(models.Model):
     
 class ToolProject(models.Model):
     tool = models.ForeignKey(Tool, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tools_projects')
 
     class Meta:
         db_table = 'tools_projects'
