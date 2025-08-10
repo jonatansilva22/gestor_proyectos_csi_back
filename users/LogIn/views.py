@@ -9,8 +9,10 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
+from rest_framework.permissions import AllowAny
 
 class LogInView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():

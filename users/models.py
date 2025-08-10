@@ -1,13 +1,13 @@
 from django.db import models
 
-# Create your models here.
+#Create your models here.
 class RoleType(models.Model):
     name = models.CharField(max_length=20)
 
     class Meta:
         db_table = 'role_types'
 
-    def __str__(self):
+    def str(self):
         return str(self.name)
 
 
@@ -22,8 +22,12 @@ class User(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_authenticated(self):
+        return True
+
     class Meta:
         db_table = 'users'
 
-    def __str__(self):
+    def str(self):
         return str(self.username)

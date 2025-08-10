@@ -29,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         raw_password = validated_data.pop('password')
+        self.raw_password = raw_password
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
         validated_data['password'] = hashed_password.decode('utf-8')
         return User.objects.create(**validated_data)

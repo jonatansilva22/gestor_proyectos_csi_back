@@ -1,14 +1,22 @@
+from django.shortcuts import render
 from rest_framework import viewsets
-from .models import Project, StatusType
 from .Serializers import ProjectSerializer, StatusTypeSerializer
+from .models import Project, StatusType
 
+from permissions.utils.utils import user_has_permission
+from users.utils.validations import PermissionValidatedViewSet
+from rest_framework.permissions import IsAuthenticated
+
+#Create your views here.
 class StatusTypeViewSet(viewsets.ModelViewSet):
-    queryset = StatusType.objects.all()
+    queryset = StatusType.objects.all() # type: ignore[attr-defined]
     serializer_class = StatusTypeSerializer
 
-class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all().order_by('id')\
-        .select_related('group', 'status', 'project_owner')\
-        .prefetch_related('areas_projects__area', 'tools_projects__tool', 'repositories_projects__repository')
-
+class ProjectViewSet(PermissionValidatedViewSet):
+    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    view_perm = 'view_projects'
+    add_perm = 'add_project'
+    change_perm = 'change_project'
+    delete_perm = 'delete_project'
+    permission_classes = [IsAuthenticated]

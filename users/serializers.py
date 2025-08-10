@@ -23,5 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        # Aquí puedes agregar lógica para hashear la contraseña si lo deseas
-        return User.objects.create(**validated_data)
+        user = User.objects.create(**validated_data)
+        return user
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
