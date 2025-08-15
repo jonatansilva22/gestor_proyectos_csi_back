@@ -28,6 +28,7 @@ from tools import urls as tools_urls
 from users.Crear_Usuario import urls as user_urls
 from users.LogIn import urls as login_urls
 from workgroups import urls as groups_urls
+from dashboard import urls as dashboard_urls
 
 urlpatterns = [
     #path('admin/', admin.site.urls),
@@ -38,6 +39,7 @@ urlpatterns = [
     path('api/', include(user_urls)),
     path('api/', include(login_urls)),
     path('api/', include(groups_urls)),
+    path('api/', include(dashboard_urls)),
 ]
 
 
