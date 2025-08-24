@@ -1,54 +1,35 @@
-Instrucciones:
+Guía rápida (ver guía completa en `../docs/backend-setup.md`)
 
-Clonar repo con git bash:
--git clone https://github.com/jonatansilva22/gestor_proyectos_csi_back.git
--cd gestor_proyectos_csi_back
+1) Clonar y entrar al proyecto:
+- `git clone https://github.com/jonatansilva22/gestor_proyectos_csi_back.git`
+- `cd gestor_proyectos_csi_back`
 
-Crear y activar un entorno virtual:
--python -m venv env
--env\Scripts\activate
+2) Crear y activar entorno virtual:
+- `python -m venv env`
+- Windows: `env\Scripts\activate`
+- macOS/Linux: `source env/bin/activate`
 
-Instalar dependencias del proyecto:
-pip install -r requirements.txt
+3) Instalar dependencias:
+- `pip install -r requirements.txt`
 
-Configurar .env a nivel raiz:
--SECRET_KEY=
--DEBUG=True
+4) Configurar `.env` (ver ejemplo y opciones en la guía completa):
+- Variables necesarias: `SECRET_KEY`, `DEBUG`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`.
 
--DB_NAME=
--DB_USER=
--DB_PASSWORD=
--DB_HOST=
--DB_PORT=
+5) Aplicar migraciones:
+- `python manage.py makemigrations`
+- `python manage.py migrate`
 
-Abrir terminal del proyecto y poner los siguientes comandos para generar tablas en la DB a partir de los modelos:
--python manage.py makemigrations
--python manage.py migrate
+6) Crear datos iniciales (roles, estados, permisos) y usuario admin:
+- Sigue los pasos de “Datos iniciales” en `../docs/backend-setup.md` (uso de `manage.py shell`).
 
-Crear rama:
--git checkout -b nombre-de-su-rama
+7) Ejecutar el servidor:
+- `python manage.py runserver 0.0.0.0:8000`
 
-Subir a github:
--Subir a la rama develop (No a la rama main) 
--En el archivo .gitignore agregar los siguientes archivos para que no se suban:
-# Django
-*.log
-*.pot
-*.pyc
-__pycache__
-db.sqlite3
-media/
-staticfiles/
+Notas de colaboración:
+- Trabajar en ramas feature: `git checkout -b nombre-de-su-rama`.
+- Subir a la rama `develop` (no a `main`).
+- Mantener `.gitignore` para evitar subir `env/`, `venv/`, `*.env`, `__pycache__/`, `media/`, `staticfiles/`, etc.
+- Evitar subir archivos base compartidos (p. ej. `settings.py`, `urls.py`) sin coordinar.
 
-# Entornos virtuales
-env/
-venv/
-*.env
-
-# Visual Studio Code
-.vscode/
-
-# Archivos de configuración de Windows
-Thumbs.db
-
--No subir archivos que utilicemos todos como el settings.py, urls.py y otros (si modificar esos archivos porque son necesarios para que las funcionalidades que se implementen pero NO subir a github, en su lugar notificarme de los cambios que se hagan en esos archivos para que no haya conflictos al momento de juntarlos).
+Documentación relacionada:
+- Guía de autenticación y perfil: `../docs/autenticacion_y_perfil.md`

@@ -4,9 +4,9 @@ from django.utils.translation import gettext_lazy as _
 from users.models import User
 
 def validate_username(username):
-    if not re.match(r'^[a-zA-Z0-9_.-]{3,30}$', username):
+    if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', username):
         raise ValidationError(
-            _('El nombre de usuario debe tener entre 3 y 30 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.')
+            _('El nombre de usuario debe tener entre 3 y 50 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.')
         )
     if User.objects.filter(username=username).exists():
         raise ValidationError(_('El nombre de usuario ya está en uso.'))

@@ -66,9 +66,11 @@ ROLE_PERMISSIONS = {
         'change_tool',
         'delete_tool',
     ],
-    3: [  # Usuario
+    3: [  # Usuario/Colaborador
         'view_projects',
         'view_project',
+        'view_user',     # Puede ver datos de usuario (necesario para su perfil)
+        'change_user',   # Puede modificar datos de usuario (para editar su perfil)
     ],
 }
 

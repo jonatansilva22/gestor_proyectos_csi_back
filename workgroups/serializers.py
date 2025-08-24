@@ -7,7 +7,7 @@ from users.models import User
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name']
+        fields = ['id', 'username', 'first_name', 'last_name', 'photo']
 
 class WorkGroupSerializer(serializers.ModelSerializer):
     user_ids = serializers.ListField(
