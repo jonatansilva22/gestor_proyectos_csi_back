@@ -54,10 +54,6 @@ class UserSerializer(serializers.ModelSerializer):
         return User.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        print(f"=== SERIALIZADOR UPDATE ===")
-        print(f"Campos recibidos: {list(validated_data.keys())}")
-        print(f"Valores: {validated_data}")
-        
         # Rastrear cambios para notificaciones
         cambios_realizados = {}
         
@@ -94,7 +90,6 @@ class UserSerializer(serializers.ModelSerializer):
             hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
             cambios_realizados['password'] = True
-            print(f"Contraseña actualizada")
 
         # Permitir actualización directa de password (flujos admin)
         if 'password' in validated_data:
@@ -102,15 +97,12 @@ class UserSerializer(serializers.ModelSerializer):
             hashed = bcrypt.hashpw(raw.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
             cambios_realizados['password'] = True
-            print(f"Password directo actualizado")
 
         # Actualizar solo los campos que fueron enviados explícitamente
         # Esto preserva campos no enviados (como role, photo cuando no se cambia, etc.)
         for attr, value in validated_data.items():
             old_value = getattr(instance, attr, None)
             if old_value != value:
-                print(f"Actualizando {attr}: {old_value} -> {value}")
-                
                 # Rastrear cambio para notificación
                 if attr in ['email', 'username', 'first_name', 'last_name', 'role', 'photo']:
                     if attr == 'role':
@@ -128,8 +120,6 @@ class UserSerializer(serializers.ModelSerializer):
                         }
                 
                 setattr(instance, attr, value)
-            else:
-                print(f"Sin cambios en {attr}: {value}")
         
         # Solo guardar si hubo cambios
         instance.save()
@@ -137,7 +127,6 @@ class UserSerializer(serializers.ModelSerializer):
         # Almacenar cambios en el serializer para uso en la vista
         self.cambios_realizados = cambios_realizados
         
-        print(f"Usuario actualizado. ID: {instance.id}")
         return instance
 
     # Validaciones de nombre y apellido
@@ -161,29 +150,18 @@ class UserSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Validación general que diferencia entre creación y actualización"""
-        print(f"=== VALIDATE GENERAL ===")
-        print(f"Instance exists (actualización): {bool(self.instance)}")
-        print(f"Attrs recibidos: {attrs}")
-        
         # Si estamos creando un usuario, algunos campos son obligatorios
         if not self.instance:  # Creación
-            print("MODO: Creación - validando campos obligatorios")
             required_fields = ['username', 'first_name', 'last_name', 'email', 'password', 'role']
             for field in required_fields:
                 if field not in attrs or not attrs[field]:
-                    print(f"ERROR: Campo obligatorio faltante: {field}")
                     raise serializers.ValidationError({field: f'Este campo es obligatorio para crear un usuario.'})
-        else:
-            print("MODO: Actualización - validación flexible")
         
-        print("Validación general completada exitosamente")
         return attrs
     
     def validate_username(self, value):
         """Validación de username que considera actualizaciones"""
         if value is not None:
-            print(f"Validando username: {value}")
-            
             # Validación de formato
             import re
             if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', value):
@@ -204,8 +182,6 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         """Validación de email que considera actualizaciones"""
         if value is not None:
-            print(f"Validando email: {value}")
-            
             # Validación de longitud
             if len(value) > 50:
                 raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')

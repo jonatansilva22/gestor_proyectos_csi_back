@@ -99,27 +99,16 @@ class UserPermissionValidatedViewSet(PermissionValidatedViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         """Permite actualización parcial con validación de acceso propio"""
-        print(f"=== PARTIAL UPDATE INICIADO ===")
-        print(f"Usuario solicitante: {request.user.id} (rol: {getattr(request.user.role, 'id', None)})")
-        print(f"Usuario a modificar: {kwargs.get('pk')}")
-        print(f"Datos recibidos: {request.data}")
-        
         if not user_has_permission(request.user, self.change_perm):
-            print("ERROR: Usuario sin permisos change_user")
             return Response({'error': 'No tienes permiso para modificar'}, status=status.HTTP_403_FORBIDDEN)
         
         # Validar acceso al usuario específico
         user_id = kwargs.get('pk')
         if not self._can_access_user(request, user_id):
-            print("ERROR: Usuario intentando modificar perfil ajeno")
             return Response({'error': 'Solo puedes modificar tu propio perfil'}, status=status.HTTP_403_FORBIDDEN)
         
         try:
-            print("Llamando a super().partial_update()")
             result = super().partial_update(request, *args, **kwargs)
-            print(f"Resultado exitoso: {result.status_code}")
             return result
         except Exception as e:
-            print(f"ERROR en partial_update: {str(e)}")
-            print(f"Tipo de error: {type(e)}")
             raise

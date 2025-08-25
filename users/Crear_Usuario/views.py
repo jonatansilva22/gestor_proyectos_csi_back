@@ -12,8 +12,25 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 def credenciales_email(user_email, username, password):
-    subject = 'Tus credenciales de acceso'
-    message = f"""
+    """
+    Envía credenciales por email al usuario recién creado.
+    Retorna un diccionario con el estado del envío.
+    """
+    # Verificar configuración de email
+    try:
+        email_host = getattr(settings, 'EMAIL_HOST', None)
+        email_host_user = getattr(settings, 'EMAIL_HOST_USER', None)
+        email_host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
+        
+        if not email_host or not email_host_user or not email_host_password:
+            return {
+                'enviado': False,
+                'error': 'configuracion_faltante',
+                'mensaje': 'Configuración de email no encontrada en .env'
+            }
+        
+        subject = 'Tus credenciales de acceso'
+        message = f"""
 Hola {username},
 
 Tu cuenta ha sido creada exitosamente.
@@ -25,13 +42,22 @@ Contraseña: {password}
 Saludos,
 CSI PRO.
 """
-    from_email = settings.EMAIL_HOST_USER
-    recipient_list = [user_email]
+        from_email = settings.EMAIL_HOST_USER
+        recipient_list = [user_email]
 
-    try:
         send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        return {
+            'enviado': True,
+            'error': None,
+            'mensaje': f'Credenciales enviadas exitosamente a {user_email}'
+        }
+        
     except Exception as e:
-        print(f"Error enviando correo: {e}")
+        return {
+            'enviado': False,
+            'error': 'error_envio',
+            'mensaje': f'Error al enviar email: {str(e)}'
+        }
 
 
 def notificar_cambios_usuario(user_email, username, cambios_realizados, cambio_por_admin=False, admin_username=None):
@@ -85,9 +111,8 @@ CSI PRO.
 
     try:
         send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-        print(f"Notificación de cambios enviada a {user_email}")
     except Exception as e:
-        print(f"Error enviando notificación de cambios: {e}")
+        pass
 
 
 class UserViewSet(UserPermissionValidatedViewSet):
@@ -103,8 +128,35 @@ class UserViewSet(UserPermissionValidatedViewSet):
     def perform_create(self, serializer):
         user = serializer.save()
         raw_password = getattr(serializer, 'raw_password', None)
+        
+        # Almacenar el estado del envío de email para usar en create()
+        email_status = None
         if raw_password:
-            credenciales_email(user.email, user.username, raw_password)
+            email_status = credenciales_email(user.email, user.username, raw_password)
+        
+        # Guardar el estado del email en el serializer para acceso posterior
+        serializer.email_status = email_status
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        
+        # Preparar respuesta con información del usuario creado
+        response_data = serializer.data
+        
+        # Agregar información del estado del email si está disponible
+        email_status = getattr(serializer, 'email_status', None)
+        if email_status:
+            response_data['email_info'] = {
+                'enviado': email_status['enviado'],
+                'mensaje': email_status['mensaje']
+            }
+            if not email_status['enviado']:
+                response_data['email_info']['error'] = email_status['error']
+        
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
     
     def perform_update(self, serializer):
         # Obtener información antes de guardar
