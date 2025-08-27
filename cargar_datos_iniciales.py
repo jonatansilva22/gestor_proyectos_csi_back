@@ -6,8 +6,9 @@ Inserta:
 - Roles (1=Admin, 2=Superadmin, 3=Colaborador)
 - Estados de proyecto (1=Activo, 2=Inactivo, 3=Completado)
 - Permisos referenciados por las vistas
-- Asignación de todos los permisos al rol Admin
+- Asignación de todos los permisos al rol Admin y Superadmin
 - Usuario admin inicial (username=admin, password=Admin123!) si no existe
+- Usuario superadmin inicial (username=superadmin, password=SuperAdmin123!) si no existe
 
 Uso:
   1) Ejecuta migraciones antes: `python manage.py migrate`
@@ -143,6 +144,26 @@ def ensure_admin_user():
         print("ℹ️  Usuario admin ya existe")
 
 
+def ensure_superadmin_user():
+    superadmin_role = RoleType.objects.get(id=2)
+    raw_password = "SuperAdmin123!"
+    hashed = bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    user, created = User.objects.get_or_create(
+        username="superadmin",
+        defaults={
+            "first_name": "Super",
+            "last_name": "Admin",
+            "email": "superadmin@example.com",
+            "password": hashed,
+            "role": superadmin_role,
+        },
+    )
+    if created:
+        print("✅ Usuario superadmin creado. Usuario=superadmin Password=SuperAdmin123!")
+    else:
+        print("ℹ️  Usuario superadmin ya existe")
+
+
 def update_colab_permissions():
     try:
         call_command("update_colaborador_permissions")
@@ -175,6 +196,7 @@ def main():
     perms = ensure_permissions()
     assign_permissions(perms)
     ensure_admin_user()
+    ensure_superadmin_user()
     update_colab_permissions()
     print_permissions_summary()
     print("\n🎉 Datos iniciales de desarrollo listos.")
