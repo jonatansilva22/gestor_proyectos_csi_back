@@ -8,50 +8,40 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from permissions.utils.utils import user_has_permission
 from users.utils.validations import UserPermissionValidatedViewSet
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
+from django.template.loader import render_to_string
+import threading
 
 def credenciales_email(user_email, username, password):
     """
-    Envía credenciales por email al usuario recién creado.
-    Retorna un diccionario con el estado del envío.
+    Envía credenciales por email al usuario recién creado usando un template HTML.
     """
-    # Verificar configuración de email
     try:
-        email_host = getattr(settings, 'EMAIL_HOST', None)
-        email_host_user = getattr(settings, 'EMAIL_HOST_USER', None)
-        email_host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
-        
-        if not email_host or not email_host_user or not email_host_password:
-            return {
-                'enviado': False,
-                'error': 'configuracion_faltante',
-                'mensaje': 'Configuración de email no encontrada en .env'
-            }
-        
         subject = 'Tus credenciales de acceso'
-        message = f"""
-Hola {username},
-
-Tu cuenta ha sido creada exitosamente.
-
-Usuario: {username}
-Contraseña: {password}
-
-
-Saludos,
-CSI PRO.
-"""
         from_email = settings.EMAIL_HOST_USER
         recipient_list = [user_email]
 
-        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        # Renderizar el template HTML
+        html_message = render_to_string('email/credenciales.html', {
+            'username': username,
+            'password': password,
+        })
+
+        # Crear el correo con HTML
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body='Tu cuenta ha sido creada exitosamente.',  # Texto plano de respaldo
+            from_email=from_email,
+            to=recipient_list,
+        )
+        email.attach_alternative(html_message, "text/html")
+        email.send(fail_silently=False)
         return {
             'enviado': True,
             'error': None,
             'mensaje': f'Credenciales enviadas exitosamente a {user_email}'
         }
-        
     except Exception as e:
         return {
             'enviado': False,
@@ -127,15 +117,16 @@ class UserViewSet(UserPermissionValidatedViewSet):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        raw_password = getattr(serializer, 'raw_password', None)
-        
-        # Almacenar el estado del envío de email para usar en create()
-        email_status = None
-        if raw_password:
+        raw_password = self.request.data.get('password') or self.request.data.get('new_password')
+
+        def enviar_email_async():
+            print("Enviando correo a:", user.email)
             email_status = credenciales_email(user.email, user.username, raw_password)
-        
-        # Guardar el estado del email en el serializer para acceso posterior
-        serializer.email_status = email_status
+            print("Resultado del envío:", email_status)
+            serializer.email_status = email_status
+
+        if raw_password:
+            threading.Thread(target=enviar_email_async).start()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -163,28 +154,25 @@ class UserViewSet(UserPermissionValidatedViewSet):
         instance = serializer.instance
         user_email = instance.email
         username = instance.username
-        
+
         # Determinar si el cambio lo hace el propio usuario o un admin
         usuario_actual = self.request.user
         es_cambio_por_admin = (usuario_actual.id != instance.id)
         admin_username = usuario_actual.username if es_cambio_por_admin else None
-        
+
         # Guardar cambios
         updated_instance = serializer.save()
-        
+
         # Obtener cambios detectados por el serializer
         cambios_realizados = getattr(serializer, 'cambios_realizados', {})
-        
-        # Si hubo cambios, enviar notificación
-        if cambios_realizados:
-            # Usar el email actual para envío (en caso de que se haya cambiado el email, usar el nuevo)
-            email_para_envio = updated_instance.email
-            username_para_envio = updated_instance.username
-            
-            notificar_cambios_usuario(
-                email_para_envio,
-                username_para_envio, 
-                cambios_realizados,
-                cambio_por_admin=es_cambio_por_admin,
-                admin_username=admin_username
-            )
+
+        # Si hubo cambios, NO enviar notificación por correo
+        # (Elimina o comenta la siguiente línea)
+        # if cambios_realizados:
+        #     notificar_cambios_usuario(
+        #         updated_instance.email,
+        #         updated_instance.username,
+        #         cambios_realizados,
+        #         cambio_por_admin=es_cambio_por_admin,
+        #         admin_username=admin_username
+        #     )

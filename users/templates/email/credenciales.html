@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Bienvenido a CSI PRO</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 40px auto; background: #7145D6; border-radius: 8px; box-shadow: 0 2px 8px #e0e0e0; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .header img { width: 100px; height: 100px; }
+        h2 { color: #ffffff; margin: 0; }
+        h4 { color: #ffffff; margin-bottom: 16px; }
+        .info { background: #ffffff; border-radius: 6px; padding: 16px; margin-bottom: 24px; }
+        .label { font-weight: bold; color: #7145D6; }
+        .footer { font-size: 13px; color: #000000; margin-top: 32px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>¡Bienvenido a CSI PRO!</h2>
+            <img src="https://logo-csi-pro.s3.us-west-1.amazonaws.com/logo.png" alt="Logo CSI PRO">
+        </div>
+        <h4>Hola <strong>{{ username }}</strong>,</h4>
+        <div class="info">
+            <p>Tu cuenta ha sido creada exitosamente.</p>
+            <p><span class="label">Usuario:</span> {{ username }}</p>
+            <p><span class="label">Contraseña:</span> {{ password }}</p>
+        </div>
+        <div class="footer">
+            Si tienes dudas, contacta al administrador.<br>
+            &copy; CSI PRO - Universidad de Sonora
+        </div>
+    </div>
+</body>
+</html>

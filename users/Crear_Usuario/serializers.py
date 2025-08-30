@@ -185,6 +185,10 @@ class UserSerializer(serializers.ModelSerializer):
             # Validación de longitud
             if len(value) > 50:
                 raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')
+
+            #validacion del correo
+            if not value.lower().endswith('@unison.mx'):
+                raise serializers.ValidationError('El correo electrónico debe pertenecer al dominio @unison.mx.')
             
             # Validación de unicidad (excluyendo el usuario actual en actualizaciones)
             queryset = User.objects.filter(email=value)
