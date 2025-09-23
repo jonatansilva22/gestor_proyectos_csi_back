@@ -50,6 +50,7 @@ def ensure_statuses():
         (1, "Activo"),
         (2, "Inactivo"),
         (3, "Completado"),
+        (4,"Mantenimiento")
     ]
     for sid, name in statuses:
         StatusType.objects.update_or_create(id=sid, defaults={"name": name})
@@ -108,6 +109,8 @@ def assign_permissions(perms):
     allowed = {
         "view_user",
         "change_user",
+        "view_projects",
+        "view_project",
     }
     # Eliminar permisos extra si existían
     RolePermission.objects.filter(role=collaborator).exclude(permission__name__in=allowed).delete()
