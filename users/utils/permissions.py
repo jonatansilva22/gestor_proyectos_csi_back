@@ -8,7 +8,6 @@ from users.models import User
 ROLE_PERMISSIONS = {
     1: [  # Admin
         'view_projects',
-        'view_project',
         'view_repository',
         'view_areas',
         'view_area',
@@ -38,7 +37,6 @@ ROLE_PERMISSIONS = {
     ],
     2: [ # SuperAdmin
         'view_projects',
-        'view_project',
         'view_repository',
         'view_areas',
         'view_area',
@@ -68,7 +66,6 @@ ROLE_PERMISSIONS = {
     ],
     3: [  # Usuario/Colaborador
         'view_projects',
-        'view_project',
         'view_user',     # Puede ver datos de usuario (necesario para su perfil)
         'change_user',   # Puede modificar datos de usuario (para editar su perfil)
     ],
