@@ -110,7 +110,6 @@ def assign_permissions(perms):
         "view_user",
         "change_user",
         "view_projects",
-        "view_project",
     }
     # Eliminar permisos extra si existían
     RolePermission.objects.filter(role=collaborator).exclude(permission__name__in=allowed).delete()
