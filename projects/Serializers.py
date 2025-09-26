@@ -25,7 +25,10 @@ class ProjectSerializer(serializers.ModelSerializer):
     project_owner = UserShortSerializer(read_only=True)
     # Para escritura, recibe el ID del owner
     project_owner_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), source='project_owner', write_only=True
+        queryset=User.objects.all(),
+        source='project_owner',
+        write_only=True,
+        required=False  # <-- Hazlo opcional
     )
     # Escritura
     status_id = serializers.PrimaryKeyRelatedField(
@@ -114,6 +117,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         area_ids = validated_data.pop('area_ids', [])
         tool_ids = validated_data.pop('tool_ids', [])
         repository_ids = validated_data.pop('repository_ids', [])
+
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['project_owner'] = request.user
 
         project = Project.objects.create(**validated_data)
 
