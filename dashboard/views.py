@@ -20,7 +20,8 @@ def dashboard(request):
     proyectos = [
         {"nombre": "Activo", "total": Project.objects.filter(status=1).count()},
         {"nombre": "Inactivo", "total": Project.objects.filter(status=2).count()},
-        {"nombre": "Completado", "total": Project.objects.filter(status=3).count()}
+        {"nombre": "Completado", "total": Project.objects.filter(status=3).count()},
+        {"nombre": "Mantenimiento", "total": Project.objects.filter(status=4).count()},
     ]
 
     # Listado de grupos con nombre e id
