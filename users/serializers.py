@@ -54,7 +54,12 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Rastrear cambios para notificaciones
         cambios_realizados = {}
-        
+
+        photo_file = validated_data.pop('photo', None)
+        if photo_file:
+            instance.photo = photo_file
+            cambios_realizados['photo'] = True
+                
         # Cambio de contraseña con current_password/new_password
         if 'current_password' in validated_data or 'new_password' in validated_data:
             current_password = validated_data.pop('current_password', None)
@@ -145,4 +150,31 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('El apellido es obligatorio.')
         if len(value) > 50:
             raise serializers.ValidationError('El apellido no debe exceder 50 caracteres.')
+        return value
+    
+    def validate_username(self, value):
+        if value is not None:
+            import re
+            if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', value):
+                raise serializers.ValidationError(
+                    'El nombre de usuario debe tener entre 3 y 50 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.'
+                )
+            queryset = User.objects.filter(username=value)
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError('El nombre de usuario ya está en uso.')
+        return value
+
+    def validate_email(self, value):
+        if value is not None:
+            if len(value) > 50:
+                raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')
+            if not value.lower().endswith('@unison.mx'):
+                raise serializers.ValidationError('El correo electrónico debe pertenecer al dominio @unison.mx.')
+            queryset = User.objects.filter(email=value)
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError('El correo electrónico ya está en uso.')
         return value

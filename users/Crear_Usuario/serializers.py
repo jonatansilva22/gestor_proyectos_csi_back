@@ -16,7 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
     new_password = serializers.CharField(write_only=True, required=False)
     # Campo calculado para el nombre del rol
     role_name = serializers.SerializerMethodField()
-    photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -30,7 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             'current_password',
             'new_password',
             'photo',
-            'photo_url',
             'role',
             'role_name',
             'created_at',
@@ -47,25 +45,32 @@ class UserSerializer(serializers.ModelSerializer):
             'created_at': {'read_only': True},
             'updated_at': {'read_only': True},
         }
-    
-    def get_photo_url(self, obj):
-        if obj.photo:
-            try:
-                return obj.photo.url  # Devuelve URL completa de Cloudinary
-            except Exception:
-                return None
-        return None
 
     def create(self, validated_data):
         raw_password = validated_data.pop('password')
         self.raw_password = raw_password
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
         validated_data['password'] = hashed_password.decode('utf-8')
-        return User.objects.create(**validated_data)
+
+        # Guardar la imagen si viene
+        photo_file = validated_data.pop('photo', None)
+        user = User.objects.create(**validated_data)  
+
+        if photo_file:
+            user.photo = photo_file  # CloudinaryField maneja la subida
+            user.save()
+
+        return user
 
     def update(self, instance, validated_data):
         # Rastrear cambios para notificaciones
         cambios_realizados = {}
+
+
+        photo_file = validated_data.pop('photo', None)
+        if photo_file:
+            instance.photo = photo_file
+            cambios_realizados['photo'] = True
         
         # Flujo de cambio de contraseña mediante current_password + new_password
         if 'current_password' in validated_data or 'new_password' in validated_data:
