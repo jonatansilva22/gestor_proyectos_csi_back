@@ -16,6 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
     new_password = serializers.CharField(write_only=True, required=False)
     # Campo calculado para el nombre del rol
     role_name = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -29,6 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
             'current_password',
             'new_password',
             'photo',
+            'photo_url',
             'role',
             'role_name',
             'created_at',
@@ -45,6 +47,14 @@ class UserSerializer(serializers.ModelSerializer):
             'created_at': {'read_only': True},
             'updated_at': {'read_only': True},
         }
+    
+    def get_photo_url(self, obj):
+        if obj.photo:
+            try:
+                return obj.photo.url  # Devuelve URL completa de Cloudinary
+            except Exception:
+                return None
+        return None
 
     def create(self, validated_data):
         raw_password = validated_data.pop('password')

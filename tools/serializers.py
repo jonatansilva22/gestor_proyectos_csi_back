@@ -17,3 +17,15 @@ class ToolSerializer(serializers.ModelSerializer):
 
     def validate_image(self, value):
         return validate_tool_image(value)
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.image:
+            try:
+                data['image'] = instance.image.url  # Devuelve la URL Cloudinary
+            except Exception:
+                data['image'] = None
+        else:
+            data['image'] = None
+        return data
+
