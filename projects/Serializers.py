@@ -83,6 +83,17 @@ class ProjectSerializer(serializers.ModelSerializer):
             'repository_ids',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.image:
+            try:
+                data['image'] = instance.image.url  # URL completa de Cloudinary
+            except Exception:
+                data['image'] = None
+        else:
+            data['image'] = None
+        return data
+
     def validate_name(self, value):
         # Si es una actualización (instancia existe)
         instance = getattr(self, 'instance', None)
