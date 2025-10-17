@@ -1,11 +1,12 @@
 from django.db import models
 from projects.models import Project
+from cloudinary.models import CloudinaryField
 
 # Create your models here.
 
 class Tool(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='tools_images/')
+    image = CloudinaryField('image', folder='tools_images', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

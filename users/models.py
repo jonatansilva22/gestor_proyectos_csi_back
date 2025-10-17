@@ -1,5 +1,5 @@
 from django.db import models
-
+from cloudinary.models import CloudinaryField
 #Create your models here.
 class RoleType(models.Model):
     name = models.CharField(max_length=20)
@@ -17,7 +17,7 @@ class User(models.Model):
     last_name = models.CharField(max_length=50)
     email = models.EmailField(max_length=50)
     password = models.CharField(max_length=255)
-    photo = models.ImageField(upload_to='users_images/', blank=True, null=True)
+    photo = CloudinaryField('image', folder='users_images', blank=True, null=True)
     role = models.ForeignKey(RoleType, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
