@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from decouple import config
+import cloudinary
 
 # --------------------------------------------------
 # BASE DIRECTORY
@@ -32,6 +33,8 @@ INSTALLED_APPS = [
     # Terceros
     'rest_framework',
     'corsheaders',
+    'cloudinary',
+    'cloudinary_storage',
 
     # Apps del proyecto
     'users',
@@ -103,6 +106,17 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
 # --------------------------------------------------
 # MEDIA FILES
 # --------------------------------------------------
+# Storage de archivos
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Cloudinary config usando variables de entorno
+cloudinary.config(
+  cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+  api_key=os.getenv('CLOUDINARY_API_KEY'),
+  api_secret=os.getenv('CLOUDINARY_API_SECRET')
+)
+
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
