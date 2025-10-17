@@ -10,9 +10,13 @@ def validate_positive(value):
 def validate_image_format(image):
     if image is None:
         return image
-    img = Image.open(image)
-    if img.format not in ['JPEG', 'PNG']:
-        raise serializers.ValidationError("Solo se permiten imágenes JPEG o PNG.")
+    try:
+        img = Image.open(image)
+        if img.format not in ['JPEG', 'PNG']:
+            raise serializers.ValidationError("Solo se permiten imágenes JPEG o PNG.")
+        image.seek(0)  # 👈 Resetea el puntero del archivo para que Django pueda leerlo de nuevo
+    except Exception:
+        raise serializers.ValidationError("Archivo de imagen inválido.")
     return image
 
 def validate_name(value, instance=None):
