@@ -16,6 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
     new_password = serializers.CharField(write_only=True, required=False)
     # Campo calculado para el nombre del rol
     role_name = serializers.SerializerMethodField()
+    # Campo calculado para devolver la URL completa de Cloudinary
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -38,7 +40,6 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True, 'required': False},
             'first_name': {'required': False},
             'last_name': {'required': False}, 
-            'photo': {'required': False},
             'role': {'required': False},
             'current_password': {'write_only': True, 'required': False},
             'new_password': {'write_only': True, 'required': False},
@@ -46,33 +47,38 @@ class UserSerializer(serializers.ModelSerializer):
             'updated_at': {'read_only': True},
         }
 
+    def get_photo(self, obj):
+        """Devolver la URL completa de Cloudinary si existe"""
+        try:
+            if obj.photo:
+                return obj.photo.url  # CloudinaryField genera automáticamente la URL completa
+        except Exception:
+            pass
+        return None
+
     def create(self, validated_data):
         raw_password = validated_data.pop('password')
         self.raw_password = raw_password
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
         validated_data['password'] = hashed_password.decode('utf-8')
 
-        # Guardar la imagen si viene
         photo_file = validated_data.pop('photo', None)
-        user = User.objects.create(**validated_data)  
+        user = User.objects.create(**validated_data)
 
         if photo_file:
-            user.photo = photo_file  # CloudinaryField maneja la subida
+            user.photo = photo_file
             user.save()
 
         return user
 
     def update(self, instance, validated_data):
-        # Rastrear cambios para notificaciones
         cambios_realizados = {}
-
 
         photo_file = validated_data.pop('photo', None)
         if photo_file:
             instance.photo = photo_file
             cambios_realizados['photo'] = True
         
-        # Flujo de cambio de contraseña mediante current_password + new_password
         if 'current_password' in validated_data or 'new_password' in validated_data:
             current_password = validated_data.pop('current_password', None)
             new_password = validated_data.pop('new_password', None)
@@ -82,13 +88,11 @@ class UserSerializer(serializers.ModelSerializer):
             if not new_password:
                 raise serializers.ValidationError({'new_password': 'La nueva contraseña es requerida'})
 
-            # Validar nueva contraseña
             try:
                 validate_new_password(new_password)
             except Exception as e:
                 raise serializers.ValidationError({'new_password': str(e)})
 
-            # Verificar actual (hash bcrypt o texto plano)
             ok = False
             try:
                 if instance.password and instance.password.startswith('$2'):
@@ -101,27 +105,21 @@ class UserSerializer(serializers.ModelSerializer):
             if not ok:
                 raise serializers.ValidationError({'current_password': 'La contraseña actual es incorrecta'})
 
-            # Guardar nuevo hash
             hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
             cambios_realizados['password'] = True
 
-        # Permitir actualización directa de password (flujos admin)
         if 'password' in validated_data:
             raw = validated_data.pop('password')
             hashed = bcrypt.hashpw(raw.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
             cambios_realizados['password'] = True
 
-        # Actualizar solo los campos que fueron enviados explícitamente
-        # Esto preserva campos no enviados (como role, photo cuando no se cambia, etc.)
         for attr, value in validated_data.items():
             old_value = getattr(instance, attr, None)
             if old_value != value:
-                # Rastrear cambio para notificación
                 if attr in ['email', 'username', 'first_name', 'last_name', 'role', 'photo']:
                     if attr == 'role':
-                        # Para el rol, obtener el nombre legible
                         old_role_name = old_value.name if old_value else 'Sin rol'
                         new_role_name = value.name if value else 'Sin rol'
                         cambios_realizados[attr] = {
@@ -136,17 +134,12 @@ class UserSerializer(serializers.ModelSerializer):
                 
                 setattr(instance, attr, value)
         
-        # Solo guardar si hubo cambios
         instance.save()
-        
-        # Almacenar cambios en el serializer para uso en la vista
         self.cambios_realizados = cambios_realizados
-        
         return instance
 
-    # Validaciones de nombre y apellido
     def validate_first_name(self, value: str):
-        if value is not None:  # Solo validar si se proporciona el campo
+        if value is not None:
             value = (value or '').strip()
             if not value:
                 raise serializers.ValidationError('El nombre no puede estar vacío.')
@@ -155,7 +148,7 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_last_name(self, value: str):
-        if value is not None:  # Solo validar si se proporciona el campo
+        if value is not None:
             value = (value or '').strip()
             if not value:
                 raise serializers.ValidationError('El apellido no puede estar vacío.')
@@ -164,29 +157,23 @@ class UserSerializer(serializers.ModelSerializer):
         return value
     
     def validate(self, attrs):
-        """Validación general que diferencia entre creación y actualización"""
-        # Si estamos creando un usuario, algunos campos son obligatorios
-        if not self.instance:  # Creación
+        if not self.instance:
             required_fields = ['username', 'first_name', 'last_name', 'email', 'password', 'role']
             for field in required_fields:
                 if field not in attrs or not attrs[field]:
                     raise serializers.ValidationError({field: f'Este campo es obligatorio para crear un usuario.'})
-        
         return attrs
     
     def validate_username(self, value):
-        """Validación de username que considera actualizaciones"""
         if value is not None:
-            # Validación de formato
             import re
             if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', value):
                 raise serializers.ValidationError(
                     'El nombre de usuario debe tener entre 3 y 50 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.'
                 )
             
-            # Validación de unicidad (excluyendo el usuario actual en actualizaciones)
             queryset = User.objects.filter(username=value)
-            if self.instance:  # Actualización
+            if self.instance:
                 queryset = queryset.exclude(pk=self.instance.pk)
             
             if queryset.exists():
@@ -195,19 +182,15 @@ class UserSerializer(serializers.ModelSerializer):
         return value
     
     def validate_email(self, value):
-        """Validación de email que considera actualizaciones"""
         if value is not None:
-            # Validación de longitud
             if len(value) > 50:
                 raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')
 
-            #validacion del correo
             if not value.lower().endswith('@unison.mx'):
                 raise serializers.ValidationError('El correo electrónico debe pertenecer al dominio @unison.mx.')
             
-            # Validación de unicidad (excluyendo el usuario actual en actualizaciones)
             queryset = User.objects.filter(email=value)
-            if self.instance:  # Actualización
+            if self.instance:
                 queryset = queryset.exclude(pk=self.instance.pk)
             
             if queryset.exists():
@@ -216,7 +199,6 @@ class UserSerializer(serializers.ModelSerializer):
         return value
     
     def get_role_name(self, obj):
-        """Obtener el nombre del rol"""
         if obj.role:
             return obj.role.name
         return None
