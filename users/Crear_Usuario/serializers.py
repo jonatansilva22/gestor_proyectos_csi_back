@@ -1,23 +1,13 @@
+# users/serializers.py
 import bcrypt
 from rest_framework import serializers
 from users.models import User
-from users.Crear_Usuario.validations import (
-    validate_username,
-    validate_email,
-    validate_password as validate_new_password,
-)
+from users.utils.validators import validate_password as validate_new_password
 
 class UserSerializer(serializers.ModelSerializer):
-    # Remover validadores automáticos - los manejaremos manualmente
-    username = serializers.CharField(required=False)
-    email = serializers.EmailField(required=False)
     # Campos auxiliares para cambio de contraseña en perfil
     current_password = serializers.CharField(write_only=True, required=False)
     new_password = serializers.CharField(write_only=True, required=False)
-    # Campo calculado para el nombre del rol
-    role_name = serializers.SerializerMethodField()
-    # Campo calculado para devolver la URL completa de Cloudinary
-    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -30,9 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
             'password',
             'current_password',
             'new_password',
-            'photo',
+            'photo',   # CloudinaryField se maneja directamente
             'role',
-            'role_name',
             'created_at',
             'updated_at'
         ]
@@ -47,52 +36,43 @@ class UserSerializer(serializers.ModelSerializer):
             'updated_at': {'read_only': True},
         }
 
-    def get_photo(self, obj):
-        """Devolver la URL completa de Cloudinary si existe"""
-        try:
-            if obj.photo:
-                return obj.photo.url  # CloudinaryField genera automáticamente la URL completa
-        except Exception:
-            pass
-        return None
-
+    # -----------------------------
+    # Crear usuario
+    # -----------------------------
     def create(self, validated_data):
-        raw_password = validated_data.pop('password')
-        self.raw_password = raw_password
-        hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-        validated_data['password'] = hashed_password.decode('utf-8')
+        raw_password = validated_data.pop('password', None)
+        if raw_password:
+            hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
+            validated_data['password'] = hashed_password.decode('utf-8')
 
-        photo_file = validated_data.pop('photo', None)
+        # DRF y Cloudinary manejan el campo photo automáticamente
         user = User.objects.create(**validated_data)
-
-        if photo_file:
-            user.photo = photo_file
-            user.save()
-
         return user
 
+    # -----------------------------
+    # Actualizar usuario
+    # -----------------------------
     def update(self, instance, validated_data):
-        cambios_realizados = {}
+        # Cambio de foto
+        if 'photo' in validated_data:
+            instance.photo = validated_data.pop('photo')
 
-        photo_file = validated_data.pop('photo', None)
-        if photo_file:
-            instance.photo = photo_file
-            cambios_realizados['photo'] = True
-        
-        if 'current_password' in validated_data or 'new_password' in validated_data:
-            current_password = validated_data.pop('current_password', None)
-            new_password = validated_data.pop('new_password', None)
-
+        # Cambio de contraseña con current_password/new_password
+        current_password = validated_data.pop('current_password', None)
+        new_password = validated_data.pop('new_password', None)
+        if current_password or new_password:
             if not current_password:
                 raise serializers.ValidationError({'current_password': 'La contraseña actual es requerida'})
             if not new_password:
                 raise serializers.ValidationError({'new_password': 'La nueva contraseña es requerida'})
 
+            # Validar nueva contraseña
             try:
                 validate_new_password(new_password)
             except Exception as e:
                 raise serializers.ValidationError({'new_password': str(e)})
 
+            # Verificar contraseña actual
             ok = False
             try:
                 if instance.password and instance.password.startswith('$2'):
@@ -107,98 +87,60 @@ class UserSerializer(serializers.ModelSerializer):
 
             hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
-            cambios_realizados['password'] = True
 
+        # Cambio directo de password
         if 'password' in validated_data:
             raw = validated_data.pop('password')
             hashed = bcrypt.hashpw(raw.encode('utf-8'), bcrypt.gensalt())
             instance.password = hashed.decode('utf-8')
-            cambios_realizados['password'] = True
 
+        # Actualizar otros campos
         for attr, value in validated_data.items():
-            old_value = getattr(instance, attr, None)
-            if old_value != value:
-                if attr in ['email', 'username', 'first_name', 'last_name', 'role', 'photo']:
-                    if attr == 'role':
-                        old_role_name = old_value.name if old_value else 'Sin rol'
-                        new_role_name = value.name if value else 'Sin rol'
-                        cambios_realizados[attr] = {
-                            'anterior': old_role_name,
-                            'nuevo': new_role_name
-                        }
-                    else:
-                        cambios_realizados[attr] = {
-                            'anterior': old_value,
-                            'nuevo': value
-                        }
-                
-                setattr(instance, attr, value)
-        
+            setattr(instance, attr, value)
+
         instance.save()
-        self.cambios_realizados = cambios_realizados
         return instance
 
+    # -----------------------------
+    # Validaciones
+    # -----------------------------
     def validate_first_name(self, value: str):
-        if value is not None:
-            value = (value or '').strip()
-            if not value:
-                raise serializers.ValidationError('El nombre no puede estar vacío.')
-            if len(value) > 50:
-                raise serializers.ValidationError('El nombre no debe exceder 50 caracteres.')
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('El nombre no puede estar vacío.')
+        if len(value) > 50:
+            raise serializers.ValidationError('El nombre no debe exceder 50 caracteres.')
         return value
 
     def validate_last_name(self, value: str):
-        if value is not None:
-            value = (value or '').strip()
-            if not value:
-                raise serializers.ValidationError('El apellido no puede estar vacío.')
-            if len(value) > 50:
-                raise serializers.ValidationError('El apellido no debe exceder 50 caracteres.')
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('El apellido no puede estar vacío.')
+        if len(value) > 50:
+            raise serializers.ValidationError('El apellido no debe exceder 50 caracteres.')
         return value
-    
-    def validate(self, attrs):
-        if not self.instance:
-            required_fields = ['username', 'first_name', 'last_name', 'email', 'password', 'role']
-            for field in required_fields:
-                if field not in attrs or not attrs[field]:
-                    raise serializers.ValidationError({field: f'Este campo es obligatorio para crear un usuario.'})
-        return attrs
-    
-    def validate_username(self, value):
-        if value is not None:
-            import re
-            if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', value):
-                raise serializers.ValidationError(
-                    'El nombre de usuario debe tener entre 3 y 50 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.'
-                )
-            
-            queryset = User.objects.filter(username=value)
-            if self.instance:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            
-            if queryset.exists():
-                raise serializers.ValidationError('El nombre de usuario ya está en uso.')
-        
-        return value
-    
-    def validate_email(self, value):
-        if value is not None:
-            if len(value) > 50:
-                raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')
 
-            if not value.lower().endswith('@unison.mx'):
-                raise serializers.ValidationError('El correo electrónico debe pertenecer al dominio @unison.mx.')
-            
-            queryset = User.objects.filter(email=value)
-            if self.instance:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            
-            if queryset.exists():
-                raise serializers.ValidationError('El correo electrónico ya está en uso.')
-        
+    def validate_username(self, value):
+        import re
+        if not re.match(r'^[a-zA-Z0-9_.-]{3,50}$', value):
+            raise serializers.ValidationError(
+                'El nombre de usuario debe tener entre 3 y 50 caracteres y solo puede contener letras, números, guiones, puntos y guiones bajos.'
+            )
+        queryset = User.objects.filter(username=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('El nombre de usuario ya está en uso.')
         return value
-    
-    def get_role_name(self, obj):
-        if obj.role:
-            return obj.role.name
-        return None
+
+    def validate_email(self, value):
+        if len(value) > 50:
+            raise serializers.ValidationError('El correo electrónico no debe exceder los 50 caracteres.')
+        if not value.lower().endswith('@unison.mx'):
+            raise serializers.ValidationError('El correo electrónico debe pertenecer al dominio @unison.mx.')
+        queryset = User.objects.filter(email=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('El correo electrónico ya está en uso.')
+        return value
