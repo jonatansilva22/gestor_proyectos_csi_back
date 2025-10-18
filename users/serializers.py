@@ -6,6 +6,7 @@ import bcrypt
 class UserSerializer(serializers.ModelSerializer):
     current_password = serializers.CharField(write_only=True, required=False)
     new_password = serializers.CharField(write_only=True, required=False)
+    photo = serializers.ImageField(required=False, allow_null=True)
     photo_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -33,14 +34,21 @@ class UserSerializer(serializers.ModelSerializer):
             'updated_at': {'read_only': True},
         }
 
+    # -----------------------------
+    # URL de la foto
+    # -----------------------------
     def get_photo_url(self, obj):
+        """Devuelve la URL completa de Cloudinary o None si no hay foto."""
         if obj.photo:
             try:
-                return obj.photo.url  # Devuelve URL completa de Cloudinary o media
+                return obj.photo.url
             except Exception:
                 return None
         return None
 
+    # -----------------------------
+    # Crear usuario
+    # -----------------------------
     def create(self, validated_data):
         raw_password = validated_data.pop('password', None)
         if raw_password:
@@ -51,15 +59,19 @@ class UserSerializer(serializers.ModelSerializer):
                 validated_data['password'] = raw_password
         return User.objects.create(**validated_data)
 
+    # -----------------------------
+    # Actualizar usuario
+    # -----------------------------
     def update(self, instance, validated_data):
-        # Rastrear cambios para notificaciones
         cambios_realizados = {}
 
-        photo_file = validated_data.pop('photo', None)
-        if photo_file:
-            instance.photo = photo_file
-            cambios_realizados['photo'] = True
-                
+        # Si se sube una nueva foto
+        if 'photo' in validated_data:
+            new_photo = validated_data.pop('photo', None)
+            if new_photo:
+                instance.photo = new_photo
+                cambios_realizados['photo'] = True
+
         # Cambio de contraseña con current_password/new_password
         if 'current_password' in validated_data or 'new_password' in validated_data:
             current_password = validated_data.pop('current_password', None)
@@ -70,13 +82,11 @@ class UserSerializer(serializers.ModelSerializer):
             if not new_password:
                 raise serializers.ValidationError({'new_password': 'La nueva contraseña es requerida'})
 
-            # Validar complejidad
             try:
                 validate_new_password(new_password)
             except Exception as e:
                 raise serializers.ValidationError({'new_password': str(e)})
 
-            # Verificar actual (compatibilidad con hash y texto plano)
             ok = False
             try:
                 if instance.password and instance.password.startswith('$2'):
@@ -89,7 +99,6 @@ class UserSerializer(serializers.ModelSerializer):
             if not ok:
                 raise serializers.ValidationError({'current_password': 'La contraseña actual es incorrecta'})
 
-            # Guardar nueva contraseña hasheada
             try:
                 hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                 instance.password = hashed.decode('utf-8')
@@ -98,7 +107,7 @@ class UserSerializer(serializers.ModelSerializer):
                 instance.password = new_password
                 cambios_realizados['password'] = True
 
-        # Si llega 'password' directo, hashear
+        # Si llega un password directo
         if 'password' in validated_data:
             raw = validated_data.pop('password')
             try:
@@ -109,33 +118,25 @@ class UserSerializer(serializers.ModelSerializer):
                 validated_data['password'] = raw
                 cambios_realizados['password'] = True
 
-        # Rastrear otros cambios
+        # Actualizar otros campos
         for attr, value in validated_data.items():
             old_value = getattr(instance, attr, None)
-            if old_value != value and attr in ['email', 'username', 'first_name', 'last_name', 'role', 'photo']:
+            if old_value != value and attr in ['email', 'username', 'first_name', 'last_name', 'role']:
                 if attr == 'role':
-                    # Para el rol, obtener el nombre legible
                     old_role_name = old_value.name if old_value else 'Sin rol'
                     new_role_name = value.name if value else 'Sin rol'
-                    cambios_realizados[attr] = {
-                        'anterior': old_role_name,
-                        'nuevo': new_role_name
-                    }
+                    cambios_realizados[attr] = {'anterior': old_role_name, 'nuevo': new_role_name}
                 else:
-                    cambios_realizados[attr] = {
-                        'anterior': old_value,
-                        'nuevo': value
-                    }
+                    cambios_realizados[attr] = {'anterior': old_value, 'nuevo': value}
             setattr(instance, attr, value)
-        
+
         instance.save()
-        
-        # Almacenar cambios en el serializer para uso en la vista
         self.cambios_realizados = cambios_realizados
-        
         return instance
 
-    # Validaciones de campos de texto
+    # -----------------------------
+    # Validaciones de texto
+    # -----------------------------
     def validate_first_name(self, value: str):
         value = (value or '').strip()
         if not value:
