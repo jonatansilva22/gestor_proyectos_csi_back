@@ -45,6 +45,17 @@ class UserSerializer(serializers.ModelSerializer):
             except Exception:
                 return None
         return None
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.photo:
+            try:
+                data['photo_url'] = instance.photo.url
+            except Exception:
+                data['photo_url'] = None
+        else:
+            data['photo_url'] = None
+        return data
 
     # -----------------------------
     # Crear usuario
