@@ -5,9 +5,18 @@ from .utils.validators import validate_workgroup_name, validate_duplicate_users
 from users.models import User
 
 class UserShortSerializer(serializers.ModelSerializer):
+    photo_url = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'photo']
+        fields = ['id', 'username', 'first_name', 'last_name', 'photo', 'photo_url']
+    
+    def get_photo_url(self, obj):
+        if obj.photo:
+            try:
+                return obj.photo.url  # Devuelve la URL completa de Cloudinary
+            except Exception:
+                return None
+        return None
 
 class WorkGroupSerializer(serializers.ModelSerializer):
     user_ids = serializers.ListField(
