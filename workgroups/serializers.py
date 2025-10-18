@@ -5,18 +5,18 @@ from .utils.validators import validate_workgroup_name, validate_duplicate_users
 from users.models import User
 
 class UserShortSerializer(serializers.ModelSerializer):
-    photo_url = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'photo', 'photo_url']
-    
-    def get_photo_url(self, obj):
-        if obj.photo:
+        fields = ['id', 'username', 'first_name', 'last_name', 'photo']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.photo:
             try:
-                return obj.photo.url  # Devuelve la URL completa de Cloudinary
+                ret['photo'] = instance.photo.url  # Aquí va la URL completa
             except Exception:
-                return None
-        return None
+                ret['photo'] = None
+        return ret
 
 class WorkGroupSerializer(serializers.ModelSerializer):
     user_ids = serializers.ListField(
