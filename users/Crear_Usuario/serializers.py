@@ -38,13 +38,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        # Reemplaza photo con la URL de Cloudinary
         if instance.photo:
             try:
-                data['photo_url'] = instance.photo.url
+                data['photo'] = instance.photo.url
             except Exception:
-                data['photo_url'] = None
+                data['photo'] = None
         else:
-            data['photo_url'] = None
+            data['photo'] = None
         return data
 
     # -----------------------------
